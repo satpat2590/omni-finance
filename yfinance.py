@@ -1,4 +1,5 @@
 import feedparser
+import datetime
 import json
 import requests
 from bs4 import BeautifulSoup
@@ -6,10 +7,39 @@ from fake_useragent import UserAgent, FakeUserAgent
 from urllib.parse import urljoin
 
 
-def fetch_yahoo_finance_rss():
+"""
+    STANDALONE METHODS
+"""
+def request_to_reuters() -> bytes:
+    """
+        Make a call to the reuters business site and pull the full HTML response
+    """
+ # Define the Reuters Business URL
+    url = "https://www.reuters.com/business/"
+    
+ # Set up headers (using a random user agent for stealth)
+    headers = {
+        "User-Agent": UserAgent().random,
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/"
+    }
+    
+ # Make the HTTP request
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        print(f"Failed to fetch page, status code: {response.status_code}")
+        return []
+    
+    return response.content
+
+def fetch_yahoo_finance_rss() -> list:
+    """
+        Pull all of the feeds from Yahoo Finance RSS
+    """
     url = "https://finance.yahoo.com/news/rss"
     feed = feedparser.parse(url)
     articles = []
+
     for entry in feed.entries:
         #print(json.dumps(entry.title_detail, indent=4), "\n")
         articles.append({
@@ -18,38 +48,102 @@ def fetch_yahoo_finance_rss():
             "link": entry.link,
             "published": entry.published,
         })
-    return articles
-
-
-def scrape_reuters_news():
-    url = "https://www.reuters.com/business/"
-    headers = {
-        "User-Agent": UserAgent().random,
-        "Accept-Language": "en-US,en;q=0.9",
-        "Referer": "https://www.google.com/" 
-    }
-    response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.content, "html.parser")
-    articles = []
-
-    content = soup.find('main')
-    articles = content.find_all(attrs={"data-testid": "MediaStoryCard"})
-
-    if not articles:
-        print(f"\n[HARVEY] - Unable to find articles from the <main> element in HTML.\n")
-    else:
-        for article in articles:
-         # Extract headline and link
-            headline_tag = article.find(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
-            headline = headline_tag.get_text(strip=True) if headline_tag else "No headline"
-            link_tag = headline_tag.find('a') if headline_tag else None
-            article_url = link_tag.get('href') if link_tag else "No URL"  
-
-            print(article, "\n\n")
 
     return articles
 
 
+"""
+    ANALYTICS ABSTRACTION
+"""
+class RegiScraper():
+    def __init__(self):
+        print(f"\n[REGI] - {datetime.datetime.now()} - REGI (Finance Bot) is starting up...\n")
+
+     # Make a request to https://www.reuters.com/business/ and instantiate a BeautifulSoup object with the content
+        reuters_data = request_to_reuters()
+        self.reuters_soup = None
+     # If the data was successfully retrieved, then open up the soup
+        if reuters_data:
+            self.reuters_soup = BeautifulSoup(reuters_data, "html.parser")
+        else:
+            print(f"\n[REGI] - {datetime.datetime.now()} - No data returned from Reuters...\n")
+     
+     # Analyze the Reuters data
+        self.analyze_reuters_data()
+
+     # Analyze Yahoo Finance data
+        yfinance_data = fetch_yahoo_finance_rss()
+
+        
+    def analyze_reuters_data(self):
+        """
+            Find all MediaStoryCard class divs from the HTML and then extract key elements to create structured news data
+        """
+     # Analyze the contents of the data
+        # Locate the main content area
+        main_content = self.reuters_soup.find("main")
+        if not main_content:
+            print(f"\n[REGI] - {datetime.datetime.now()} - Could not find the <main> element in the HTML.\n")
+            return []
+        
+     # Find all article cards by their data-testid attribute
+        article_elements = main_content.find_all(attrs={"data-testid": "MediaStoryCard"})
+        if not article_elements:
+            print("No articles found on the page.")
+            return []
+
+     # Base URL used for converting relative links to absolute links
+        base_url = "https://www.reuters.com"
+        articles = []
+
+     # Iterate over each article element and extract details
+        for article in article_elements:
+            articles.append(article)
+            self.analyze_article(article)
+
+
+    def analyze_article(self, article) -> any:
+        """
+            Take each MediaStoryCard div and then extract pertinent information from it
+
+        :return: A tuple of the following: (Header, Link, Category, PubDate, Summary)
+        """
+
+     # Grab the heading for the article
+        heading_element = article.find_all(attrs={"data-testid": "Heading"})
+        if heading_element:
+            heading = heading_element[0].get_text(strip=True)
+            #print(heading, "\n\n\n")
+
+     # Grab the link from the article
+        link_element = article.find_all(attrs={"data-testid": "Link"})
+        category_dirty = link_element[0].get_text(strip=True)
+        if category_dirty.endswith("category"):
+            category = category_dirty[:-len("category")]
+            if len(category) == 0:
+                category = None
+        else:
+            category = None
+
+     # 3. Extract publication datetime:
+      #    The <time> element holds the datetime attribute.
+        publication_datetime = None
+        time_tag = article.find("time")
+        if time_tag and time_tag.has_attr("datetime"):
+            publication_datetime = time_tag["datetime"]
+        
+        #print((heading, category, publication_datetime), "\n")
+
+        print(article.prettify(), "\n\n\n\n")                
+         
+
+
+
+
+
+"""
+    THIS NEEDS TO BE DECOMMISSIONED ASAP!!!
+"""
 def scrape_reuters_news2():
     # Define the Reuters Business URL
     url = "https://www.reuters.com/business/"
@@ -87,11 +181,11 @@ def scrape_reuters_news2():
 
     # Iterate over each article element and extract details
     for article in article_elements:
+        print(article.prettify(), "\n\n\n")
         # 1. Extract headline and URL:
         #    The headline is contained within one of the heading tags.
         headline_tag = article.find(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
         if headline_tag:
-            print(headline_tag)
             headline = headline_tag.get_text(strip=True)
             # Often the headline has an <a> tag with the URL.
             link_tag = headline_tag.find("a")
@@ -150,7 +244,7 @@ def scrape_reuters_news2():
         articles.append(article_data)
 
         # Print out the article's information (optional)
-        print(article_data, "\n\n")
+        #print(article_data, "\n\n")
 
     return articles
 
@@ -158,8 +252,5 @@ def scrape_reuters_news2():
 
 # Run the code baby!!!
 if __name__=="__main__":
-    news = scrape_reuters_news2()
-    print(f"Scraped {len(news)} articles.")
+    regi = RegiScraper()
 
-    news = fetch_yahoo_finance_rss()
-    print(f"Fetched {len(news)} articles.")
