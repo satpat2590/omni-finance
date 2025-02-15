@@ -16,3 +16,4 @@ We scrape news from Reuters and the Yahoo Finance RSS feeds. Over time, we will 
 
 ## LLM Configuration
 
+We have not gone this far yet! We will likely be using a mix of DeepSeek 

@@ -93,13 +93,14 @@ class RegiScraper():
             return []
 
      # Base URL used for converting relative links to absolute links
-        base_url = "https://www.reuters.com"
         articles = []
 
      # Iterate over each article element and extract details
         for article in article_elements:
             articles.append(article)
             self.analyze_article(article)
+
+        print(f"\n[REGI] - There are {len(article_elements)} in the Reuter's business page.\n")
 
 
     def analyze_article(self, article) -> any:
@@ -109,6 +110,23 @@ class RegiScraper():
         :return: A tuple of the following: (Header, Link, Category, PubDate, Summary)
         """
 
+        base_url = "https://www.reuters.com"
+
+     # 1. Extract image details:
+     #    Look for the first <img> tag to get the image URL and alt text.
+        image_url = None
+        image_alt = None
+        img_tag = article.find("img")
+        if img_tag:
+            image_url = img_tag.get("src")
+            image_alt = img_tag.get("alt")
+
+     # 2. Extract URL:
+     #    The headline is contained within one of the heading tags.
+        a_tags = article.find_all(attrs={"aria-hidden": "true"})
+        url_tag = a_tags[0]
+        url = url_tag.get("href")
+    
      # Grab the heading for the article
         heading_element = article.find_all(attrs={"data-testid": "Heading"})
         if heading_element:
@@ -126,15 +144,28 @@ class RegiScraper():
             category = None
 
      # 3. Extract publication datetime:
-      #    The <time> element holds the datetime attribute.
+     #    The <time> element holds the datetime attribute.
         publication_datetime = None
         time_tag = article.find("time")
         if time_tag and time_tag.has_attr("datetime"):
             publication_datetime = time_tag["datetime"]
         
-        #print((heading, category, publication_datetime), "\n")
+        #print((heading, category, publication_datetime, image_url, image_alt), "\n")
 
-        print(article.prettify(), "\n\n\n\n")                
+        #print(article.prettify(), "\n\n\n\n")    
+        article_data = {
+            "headline": heading,
+            "url": base_url + url,
+            "category": category,
+            "publication_datetime": publication_datetime,
+            #"description": description,
+            "image_url": image_url,
+            "image_alt": image_alt,
+        }
+
+        print(article_data, "\n")
+
+        return article_data            
          
 
 
