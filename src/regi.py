@@ -8,22 +8,12 @@ from bs4 import BeautifulSoup
 from fake_useragent import UserAgent, FakeUserAgent
 from urllib.parse import urljoin
 from typing import Dict
-import
+from regi.session import RequestSession
 
 
 """
     STANDALONE METHODS
 """
-
-def get(url: str|bytes, session: requests.Session) -> bytes:
-    time.sleep(random.uniform(2, 5))
- # Make the HTTP request
-    response = session.get(url)
-    if response.status_code != 200:
-        print(f"Failed to fetch page, status code: {response.status_code}")
-        return []
-    
-    return response.content
 
 
 def save_json(spath: str, data: Dict) -> None:
@@ -86,12 +76,10 @@ class RegiNewsScraper():
             "Referer": "https://www.google.com/",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
         }
-        self.session = requests.Session()
-        self.session.headers.update(headers)
+        reqsesh = RequestSession()
+        self.session = reqsesh.session
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.data_dir = os.path.join(self.base_dir, "data")
-        jpath = os.path.join(self.base_dir, "config/cik.json")
-        self.ticker_mapping = pull_json(jpath) # Key = Ticker; Value = CIK
 
 
     def grab_news(self) -> 'tuple[Dict, Dict]':
@@ -262,38 +250,14 @@ class RegiNewsScraper():
                 return first_paragraph.get_text(strip=True)
 
             return ""
-    
-    def fetch_sec_filings(self) -> None:
-        """
-        Fetch filings for a list of companies and save the aggregated data.
-        
-        :param cik_list: List of 10-digit CIK strings.
-        :param session: A requests.Session() configured for SEC requests.
-        :param out_path: Path to the output JSON file.
-        """
-        aggregated_filings = {}
-        for cik in cik_list:
-            filings_data = self.extract_data(cik)
-            if filings_data:
-                aggregated_filings[cik] = filings_data
-            else:
-                print(f"No data found for CIK: {cik}")
-
-        # Save aggregated data
-        spath = os.path.join(self.base_dir, f'data/filings_{datetime.datetime.now().strftime('%Y%m%d')}_{datetime.datetime.now().strftime('%H%M%S')}.json')
-        save_json(spath, aggregated_filings)
-
-    def extract_data(self, cik: int):
-        
-
-
 
 
 
 # Run the code baby!!!
 if __name__=="__main__":
     regi = RegiNewsScraper()
+    print(regi)
 
     # Example usage:
-    cik_list = ["0000320193", "0000789019"]  # e.g., Apple, Microsoft
-    regi.fetch_sec_filings(cik_list)
+    #cik_list = ["0000320193", "0000789019"]  # e.g., Apple, Microsoft
+    #regi.fetch_sec_filings(cik_list)
