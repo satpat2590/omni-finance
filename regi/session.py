@@ -1,9 +1,19 @@
-import os
+import os, json 
 from fake_useragent import UserAgent, FakeUserAgent
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 import requests
 import datetime
 import time, random
+import logging 
+import logging.config
+
+def get_logging_config() -> dict:
+    jpath = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config/loggingConfig.json")
+    config_dict = None
+    with open(jpath, 'r') as f:
+        config_dict = json.load(f)
+
+    return config_dict
 
 class RequestSession():
     def __init__(self, headers=None):
@@ -18,6 +28,14 @@ class RequestSession():
             }
         self.session = requests.Session()
         self.session.headers.update(headers)
+
+     # Configure the logger
+        logconfig = get_logging_config()
+        logging.config.dictConfig(logconfig)
+        
+     # Instantiate the logger
+        self.logger = logging.getLogger(__name__)
+        self.logger.info("Logging has been configured using the JSON file.")
 
 
     def get(self, url: str|bytes, params=None) -> bytes:

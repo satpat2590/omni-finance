@@ -1,0 +1,31 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+      "custom": {
+        "format": "[%(name)s] - %(asctime)s - %(levelname)s - %(message)s",
+        "datefmt": "%Y-%m-%d %H:%M:%S"
+      }
+    },
+    "handlers": {
+      "console": {
+        "class": "logging.StreamHandler",
+        "formatter": "custom",
+        "level": "DEBUG"
+      },
+      "file": {
+        "class": "logging.FileHandler",
+        "formatter": "custom",
+        "filename": "logs/app.log",
+        "level": "DEBUG"
+      }
+    },
+    "root": {
+      "handlers": [
+        "console",
+        "file"
+      ],
+      "level": "DEBUG"
+    }
+  }
+  

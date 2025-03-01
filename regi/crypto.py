@@ -3,6 +3,8 @@ import json
 import os, sys, re
 import datetime
 from typing import Tuple
+import logging
+import logging.config
 
 # Add modules from base repo
 from pathlib import Path
@@ -11,6 +13,13 @@ sys.path.append(str(Path(__file__).parent.parent))
 from regi.session import RequestSession
 from regi.omnidb import OmniDB 
 
+def get_logging_config() -> dict:
+    jpath = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config/loggingConfig.json")
+    config_dict = None
+    with open(jpath, 'r') as f:
+        config_dict = json.load(f)
+
+    return config_dict
 
 class Crypto():
 
@@ -27,6 +36,14 @@ class Crypto():
             'limit':'5000',
             'convert':'USD'
         }   
+        
+     # Configure the logger
+        logconfig = get_logging_config()
+        logging.config.dictConfig(logconfig)
+        
+     # Instantiate the logger
+        self.logger = logging.getLogger(__name__)
+        self.logger.info("Logging has been configured using the JSON file.")
         
      # Custom library init
         reqsesh = RequestSession(headers=self.headers)
@@ -47,6 +64,8 @@ class Crypto():
         self.db.insert_cryptos(cryptos)
         self.db.insert_market_data(market_data)
         self.db.insert_metadata(metadata)
+        res = self.db.analyze_crypto_bull_bear(crypto_id=1)
+        print(res)
 
     def fetch_crypto_data(self, api_response: str) -> tuple:
         """
@@ -86,6 +105,8 @@ class Crypto():
             # Metadata
             category = ", ".join(coin.get("tags", []))  # Convert list of tags to a string
             metadata.append((crypto_id, None, None, None, None, category))
+
+        self.logger.info(f"{len(cryptos)} cryptocurrencies were extracted from the API response.")
 
         return cryptos, market_data, metadata
 
