@@ -2,12 +2,18 @@ import feedparser
 import datetime
 import json
 from pathlib import Path
-import os, time, random
-import requests
+import os, sys
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent, FakeUserAgent
 from urllib.parse import urljoin
 from typing import Dict
+import logging
+import logging.config
+
+# Add modules from base repo
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+
 from regi.session import RequestSession
 
 
@@ -15,29 +21,37 @@ from regi.session import RequestSession
     STANDALONE METHODS
 """
 
+def get_logging_config() -> dict:
+    jpath = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config/loggingConfig.json")
+    config_dict = None
+    with open(jpath, 'r') as f:
+        config_dict = json.load(f)
 
-def save_json(spath: str, data: Dict) -> None:
+    return config_dict
+
+
+def save_json(spath: str, data: Dict, logger) -> None:
     """
         Save the data in some JSON file specified by spath
 
     :param spath: The path to the json file in which the data will be stored
     :param data: The json data to store into a file
     """
-    print(f"\n[OMNI] - {datetime.datetime.now()} - Saving data in {spath}...\n")
+    logger.info(f"Saving data in {spath}...")
     with open(spath, 'w+') as f:
         json.dump(data, f)
 
     
-def request_to_reuters(session: requests.Session) -> bytes:
+def request_to_reuters(session: RequestSession) -> bytes:
     """
         Make a call to the reuters business site and pull the full HTML response
     """
  # Define the Reuters Business URL
     url = "https://www.reuters.com/business/" 
     
-    return get(url, session)
+    return session.get(url)
 
-def fetch_yahoo_finance_rss() -> list:
+def fetch_yahoo_finance_rss(logger) -> list:
     """
         Pull all of the feeds from Yahoo Finance RSS
     """
@@ -53,7 +67,7 @@ def fetch_yahoo_finance_rss() -> list:
             "published": entry.published,
         })
     
-    print(f"\n[REGI] - There are {len(articles)} articles in the Yahoo Finance RSS feed.\n")
+    logger.info(f"There are {len(articles)} articles in the Yahoo Finance RSS feed")
 
     return articles
 
@@ -76,10 +90,17 @@ class RegiNewsScraper():
             "Referer": "https://www.google.com/",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
         }
-        reqsesh = RequestSession()
-        self.session = reqsesh.session
+        self.reqsesh = RequestSession()
+        self.session = self.reqsesh.session
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.data_dir = os.path.join(self.base_dir, "data")
+
+     # Configure the logger
+        logconfig = get_logging_config()
+        logging.config.dictConfig(logconfig)
+        
+     # Instantiate the logger
+        self.logger = logging.getLogger(__name__)
 
 
     def grab_news(self) -> 'tuple[Dict, Dict]':
@@ -97,18 +118,18 @@ class RegiNewsScraper():
         # Analyze the Reuters data
             reuters_data = self.analyze_reuters_data()
         else:
-            print(f"\n[REGI] - {datetime.datetime.now()} - No data returned from Reuters...\n")
+            self.logger.info(f"No data returned from Reuters...")
      
      # Analyze Yahoo Finance data
-        yfinance_data = fetch_yahoo_finance_rss()
+        yfinance_data = fetch_yahoo_finance_rss(logger=self.logger)
 
         spath_yfinance = os.path.join(self.data_dir, f"yfinance_{datetime.datetime.now().strftime('%Y%m%d')}_{datetime.datetime.now().strftime('%H%M%S')}.json")
         spath_reuters = os.path.join(self.data_dir, f"reuters_{datetime.datetime.now().strftime('%Y%m%d')}_{datetime.datetime.now().strftime('%H%M%S')}.json")
 
         if yfinance_data:
-            save_json(spath=spath_yfinance, data=yfinance_data)
+            save_json(spath=spath_yfinance, data=yfinance_data, logger=self.logger)
         if reuters_data:
-            save_json(spath=spath_reuters, data=reuters_data)
+            save_json(spath=spath_reuters, data=reuters_data, logger=self.logger)
 
         return yfinance_data, reuters_data
 
@@ -121,13 +142,13 @@ class RegiNewsScraper():
         # Locate the main content area
         main_content = self.reuters_soup.find("main")
         if not main_content:
-            print(f"\n[REGI] - {datetime.datetime.now()} - Could not find the <main> element in the HTML.\n")
+            self.logger.info("Could not find the <main> element in the HTML")
             return []
         
      # Find all article cards by their data-testid attribute
         article_elements = main_content.find_all(attrs={"data-testid": "MediaStoryCard"})
         if not article_elements:
-            print("\n[REGI] - No articles found on the page.\n")
+            self.logger.info("No articles found on the page")
             return []
 
      # Base URL used for converting relative links to absolute links
@@ -138,7 +159,7 @@ class RegiNewsScraper():
             article_data = self.analyze_article(article)
             articles.append(article_data)
 
-        print(f"\n[REGI] - There are {len(articles)} in the Reuter's business page.\n")
+        self.logger.info(f"There are {len(articles)} in the Reuter's business page")
         return articles
 
 
@@ -222,13 +243,8 @@ class RegiNewsScraper():
             :param url: The url to the article which you are attempting to scrape from
             :return: A string containing a summary of the article
             """
-            headers = {
-                "User-Agent": UserAgent().random,
-                "Accept-Language": "en-US,en;q=0.9",
-                "Referer": "https://www.google.com/"    
-            }
             try:
-                response = get(url, headers=headers)
+                response = self.reqsesh.get(url)
             except Exception as e:
                 print(f"Error fetching article {url}: {e}")
                 return ""
@@ -251,13 +267,3 @@ class RegiNewsScraper():
 
             return ""
 
-
-
-# Run the code baby!!!
-if __name__=="__main__":
-    regi = RegiNewsScraper()
-    print(regi)
-
-    # Example usage:
-    #cik_list = ["0000320193", "0000789019"]  # e.g., Apple, Microsoft
-    #regi.fetch_sec_filings(cik_list)

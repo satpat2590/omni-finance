@@ -31,7 +31,6 @@ class OmniDB:
         logging.config.dictConfig(logconfig)
 
         self.logger = logging.getLogger(__name__)
-        self.logger.info("Logging has been configured using the JSON file.")
 
     @contextmanager
     def sqlite_connect(self):
@@ -47,7 +46,7 @@ class OmniDB:
             conn.commit()
         except Exception as e:
             conn.rollback()
-            print(f"[OMNI DB] - Error rolling back due to: {e}\n")
+            self.logger.warning(f"Error rolling back due to: {e}\n")
             raise e
         finally:
             cursor.close()
@@ -171,6 +170,7 @@ class OmniDB:
             rows = cursor.fetchall()
             if rows:
                 df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
+                self.logger.info(f"SELECT query on 'cryptocurrency' was successful!")
                 return df
             else:
                 return pd.DataFrame()  # Return empty DataFrame if no records
@@ -196,6 +196,7 @@ class OmniDB:
             rows = cursor.fetchall()
             if rows:
                 df = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
+                self.logger.info(f"SELECT query on 'crypto_market_data' was successful!")
                 return df
             else:
                 return pd.DataFrame()
@@ -219,6 +220,7 @@ class OmniDB:
             row = cursor.fetchone()
             if row:
                 df = pd.DataFrame([row], columns=[desc[0] for desc in cursor.description])
+                self.logger.info(f"SELECT query on 'crypto_market_data' was successful!")
                 return df
             else:
                 return pd.DataFrame()
