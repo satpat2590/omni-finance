@@ -59,7 +59,7 @@ def fetch_yahoo_finance_rss(logger) -> list:
     url = "https://finance.yahoo.com/news/rss"
     feed = feedparser.parse(url)
     articles = []
-
+    date = None
     for entry in feed.entries:
         articles.append({
             "title": entry.title,
@@ -67,10 +67,11 @@ def fetch_yahoo_finance_rss(logger) -> list:
             "link": entry.link,
             "published": entry.published,
         })
+        date = entry.published
     
     logger.info(f"There are {len(articles)} articles in the Yahoo Finance RSS feed")
 
-    return articles
+    return articles, date
 
 def pull_json(jpath: str) -> dict:
  # Open the path to the JSON file as a fp, and then return the data as a dict
@@ -119,12 +120,14 @@ class RegiNewsScraper():
         if reuters_data:
             self.reuters_soup = BeautifulSoup(reuters_data.content, features="html.parser")
         # Analyze the Reuters data
-            reuters_data = self.analyze_reuters_data()
+            reuters_data, rdate = self.analyze_reuters_data()
         else:
             self.logger.info(f"No data returned from Reuters...")
      
      # Analyze Yahoo Finance data
-        yfinance_data = fetch_yahoo_finance_rss(logger=self.logger)
+        yfinance_data, yfdate = fetch_yahoo_finance_rss(logger=self.logger)
+        print("\nDate check!!!")
+        print(rdate, yfdate)
 
         spath_yfinance = os.path.join(self.data_dir, f"yfinance_{datetime.datetime.now().strftime('%Y%m%d')}_{datetime.datetime.now().strftime('%H%M%S')}.json")
         spath_reuters = os.path.join(self.data_dir, f"reuters_{datetime.datetime.now().strftime('%Y%m%d')}_{datetime.datetime.now().strftime('%H%M%S')}.json")
@@ -161,12 +164,14 @@ class RegiNewsScraper():
         articles = []
 
      # Iterate over each article element and extract details
+        date = None
         for article in article_elements:
             article_data = self.analyze_article(article)
             articles.append(article_data)
+            date = article_data["publication_datetime"]
 
         self.logger.info(f"There are {len(articles)} in the Reuter's business page")
-        return articles
+        return articles, date
 
 
     def analyze_article(self, article) -> Dict:

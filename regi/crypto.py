@@ -67,7 +67,7 @@ class Crypto:
         Returns a tuple of (cryptos, market_data, metadata).
         """
         response = self.reqsesh.get(self.latest_list_url)  # Byte response
-        data = json.loads(response)
+        data = json.loads(response.content)
 
         cryptos = []
         market_data = []

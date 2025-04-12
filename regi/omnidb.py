@@ -7,6 +7,8 @@ import json
 import logging.config
 import pandas as pd 
 import numpy as np
+import time
+import random
 
 def get_logging_config() -> dict:
     """
@@ -33,7 +35,7 @@ class OmniDB:
         self.logger = logging.getLogger(__name__)
 
     @contextmanager
-    def sqlite_connect(self, timeout=30):
+    def sqlite_connect2(self, timeout=30):
         """
         Context manager providing a cursor to interact with the SQLite database.
         Automatically commits if successful, and rolls back on errors.
@@ -52,6 +54,75 @@ class OmniDB:
             cursor.close()
             conn.close()
 
+    @contextmanager
+    def sqlite_connect(self, timeout=60, max_retries=5, retry_delay=1.0):
+        """
+        Context manager providing a cursor to interact with the SQLite database.
+        Automatically commits if successful, and rolls back on errors.
+        Implements retry logic for database locks.
+
+        :param timeout: SQLite connection timeout in seconds
+        :param max_retries: Maximum number of retries in case of database locks
+        :param retry_delay: Base delay between retries in seconds (exponential backoff applied)
+        """
+        conn = None
+        cursor = None
+        retry_count = 0
+        
+        while retry_count <= max_retries:
+            try:
+                conn = sqlite3.connect(self.db_path, timeout=timeout)
+                conn.execute("PRAGMA foreign_keys = ON")
+                cursor = conn.cursor()
+                
+                yield cursor
+                
+                # If we get here, operation was successful
+                conn.commit()
+                return
+                
+            except sqlite3.OperationalError as e:
+                if "database is locked" in str(e) and retry_count < max_retries:
+                    retry_count += 1
+                    # Exponential backoff with jitter
+                    delay = retry_delay * (2 ** (retry_count - 1)) * (0.5 + random.random())
+                    self.logger.warning(f"Database locked, retrying in {delay:.2f} seconds (attempt {retry_count}/{max_retries})")
+                    
+                    # Clean up before retry
+                    if cursor:
+                        cursor.close()
+                    if conn:
+                        conn.rollback()
+                        conn.close()
+                    
+                    time.sleep(delay)
+                else:
+                    # Either not a lock error or we've exceeded retries
+                    self.logger.error(f"SQLite error: {str(e)}")
+                    if conn:
+                        conn.rollback()
+                    raise
+                    
+            except Exception as e:
+                self.logger.error(f"Error during database operation: {str(e)}")
+                if conn:
+                    conn.rollback()
+                raise
+                
+            finally:
+                # This block is executed after the try/except block,
+                # but only if we didn't continue the while loop
+                if retry_count == max_retries:
+                    if cursor:
+                        cursor.close()
+                    if conn:
+                        conn.close()
+        
+        # If we've exhausted all retries
+        if retry_count > max_retries:
+            self.logger.error(f"Failed to acquire database lock after {max_retries} retries")
+            raise sqlite3.OperationalError(f"Database still locked after {max_retries} retries")
+        
     def initialize_database(self):
         """
         Initialize all tables if they don't exist.
@@ -759,7 +830,7 @@ class OmniDB:
         
         return article_id
 
-    def store_articles_from_scraper(self, yfinance_data, reuters_data):
+    def store_articles_from_scraper2(self, yfinance_data, reuters_data):
         """
         Store all articles from the news scraper.
         
@@ -778,6 +849,158 @@ class OmniDB:
         # Process Reuters articles
         for article in reuters_data:
             if self.store_reuters_article(article):
+                reuters_count += 1
+        
+        self.logger.info(f"Stored {yahoo_count} Yahoo Finance articles and {reuters_count} Reuters articles")
+        
+        return {
+            "yahoo_finance": yahoo_count,
+            "reuters": reuters_count,
+            "total": yahoo_count + reuters_count
+        }
+    
+    def store_articles_from_scraper(self, yfinance_data, reuters_data):
+        """
+        Store all articles from the news scraper in a single database transaction.
+        
+        :param yfinance_data: List of articles from Yahoo Finance
+        :param reuters_data: List of articles from Reuters
+        :return: Dictionary with count of articles stored
+        """
+        yahoo_count = 0
+        reuters_count = 0
+        
+        # Use a single database connection for all operations
+        with self.sqlite_connect() as cursor:
+            # Process Yahoo Finance articles
+            for article in yfinance_data:
+                title = article.get('title', '')
+                url = article.get('link', '')
+                published_date = article.get('published', '')
+                
+                if not url or not title:
+                    continue
+                    
+                # Get source ID
+                cursor.execute("SELECT id FROM news_sources WHERE name = ?", ('Yahoo Finance',))
+                result = cursor.fetchone()
+                if result:
+                    source_id = result[0]
+                else:
+                    cursor.execute("INSERT INTO news_sources (name) VALUES (?)", ('Yahoo Finance',))
+                    source_id = cursor.lastrowid
+                
+                # Check if article exists
+                cursor.execute("SELECT id FROM news_articles WHERE url = ?", (url,))
+                existing = cursor.fetchone()
+                
+                if existing:
+                    article_id = existing[0]
+                    # Update existing article
+                    cursor.execute("""
+                        UPDATE news_articles SET
+                            title = ?, 
+                            source_id = ?,
+                            published_date = ?,
+                            fetch_date = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    """, (title, source_id, published_date, article_id))
+                else:
+                    # Insert new article
+                    cursor.execute("""
+                        INSERT INTO news_articles (
+                            title, url, source_id, published_date, fetch_date
+                        ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    """, (title, url, source_id, published_date))
+                    
+                    article_id = cursor.lastrowid
+                
+                # Add default Finance category
+                cursor.execute("SELECT id FROM news_categories WHERE name = ?", ('Finance',))
+                result = cursor.fetchone()
+                if result:
+                    category_id = result[0]
+                else:
+                    cursor.execute("INSERT INTO news_categories (name) VALUES (?)", ('Finance',))
+                    category_id = cursor.lastrowid
+                    
+                # Clear existing categories
+                cursor.execute("DELETE FROM article_categories WHERE article_id = ?", (article_id,))
+                
+                # Add Finance category
+                cursor.execute("""
+                    INSERT INTO article_categories (article_id, category_id)
+                    VALUES (?, ?)
+                """, (article_id, category_id))
+                
+                yahoo_count += 1
+            
+            # Process Reuters articles
+            for article in reuters_data:
+                title = article.get('headline', '')
+                url = article.get('url', '')
+                published_date = article.get('publication_datetime', '')
+                summary = article.get('description', '')
+                image_url = article.get('image_url', '')
+                image_alt = article.get('image_alt', '')
+                
+                if not url or not title:
+                    continue
+                    
+                # Get source IDo
+                    cursor.execute("INSERT INTO news_sources (name) VALUES (?)", ('Reuters',))
+                    source_id = cursor.lastrowid
+                
+                # Check if article exists
+                cursor.execute("SELECT id FROM news_articles WHERE url = ?", (url,))
+                existing = cursor.fetchone()
+                
+                if existing:
+                    article_id = existing[0]
+                    # Update existing article
+                    cursor.execute("""
+                        UPDATE news_articles SET
+                            title = ?, 
+                            source_id = ?,
+                            published_date = ?,
+                            summary = ?,
+                            image_url = ?,
+                            image_alt = ?,
+                            fetch_date = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    """, (title, source_id, published_date, summary, image_url, image_alt, article_id))
+                else:
+                    # Insert new article
+                    cursor.execute("""
+                        INSERT INTO news_articles (
+                            title, url, source_id, published_date, summary, image_url, image_alt, fetch_date
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    """, (title, url, source_id, published_date, summary, image_url, image_alt))
+                    
+                    article_id = cursor.lastrowid
+                
+                # Process category if available
+                if article.get('category'):
+                    category_name = article.get('category')
+                    
+                    # Get category ID
+                    cursor.execute("SELECT id FROM news_categories WHERE name = ?", (category_name,))
+                    result = cursor.fetchone()
+                    if result:
+                        category_id = result[0]
+                    else:
+                        cursor.execute("INSERT INTO news_categories (name) VALUES (?)", (category_name,))
+                        category_id = cursor.lastrowid
+                    
+                    # Clear existing categories
+                    cursor.execute("DELETE FROM article_categories WHERE article_id = ?", (article_id,))
+                    
+                    # Add category
+                    cursor.execute("""
+                        INSERT INTO article_categories (article_id, category_id)
+                        VALUES (?, ?)
+                    """, (article_id, category_id))
+                
                 reuters_count += 1
         
         self.logger.info(f"Stored {yahoo_count} Yahoo Finance articles and {reuters_count} Reuters articles")
