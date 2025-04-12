@@ -52,7 +52,7 @@ class RequestSession():
                 print(f"Failed to fetch page, status code: {response.status_code}")
                 return []
             
-            return response.content
+            return response
         except (ConnectionError, Timeout, TooManyRedirects) as e:
             print(e)
 

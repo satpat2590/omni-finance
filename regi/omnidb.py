@@ -33,12 +33,12 @@ class OmniDB:
         self.logger = logging.getLogger(__name__)
 
     @contextmanager
-    def sqlite_connect(self):
+    def sqlite_connect(self, timeout=30):
         """
         Context manager providing a cursor to interact with the SQLite database.
         Automatically commits if successful, and rolls back on errors.
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=timeout)
         cursor = conn.cursor()
 
         try:
@@ -52,6 +52,25 @@ class OmniDB:
             cursor.close()
             conn.close()
 
+    def initialize_database(self):
+        """
+        Initialize all tables if they don't exist.
+        This method should be called during initialization of the OmniDB instance.
+        """
+        # Execute the SQL from omni.sql file
+        sql_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config/omni.sql")
+        if os.path.exists(sql_path):
+            with open(sql_path, 'r') as f:
+                sql_script = f.read()
+            
+            with self.sqlite_connect() as cursor:
+                cursor.executescript(sql_script)
+            
+            self.logger.info("Initialized all tables using SQL script")
+
+#############################################
+############### CRYPTO TABLES ###############
+#############################################
 
     def create_signals_table(self):
         """
@@ -420,3 +439,351 @@ class OmniDB:
             return f"Bearish outlook for {crypto_id} based on RSI signal."
         else:
             return f"Neutral signals for {crypto_id} at the moment."
+        
+#############################################
+################ NEWS TABLES ################
+#############################################
+
+    def get_source_id(self, source_name):
+        """
+        Get the ID for a news source, creating it if it doesn't exist.
+        
+        :param source_name: Name of the news source (e.g., 'Reuters', 'Yahoo Finance')
+        :return: The ID of the source
+        """
+        with self.sqlite_connect() as cursor:
+            # Try to get existing source
+            cursor.execute("SELECT id FROM news_sources WHERE name = ?", (source_name,))
+            result = cursor.fetchone()
+            
+            if result:
+                return result[0]
+            
+            # Create new source if it doesn't exist
+            cursor.execute(
+                "INSERT INTO news_sources (name) VALUES (?)",
+                (source_name,)
+            )
+            self.logger.info(f"Created new news source: {source_name}")
+            return cursor.lastrowid
+        
+    ################
+    # READ Methods
+    ################
+
+    def get_category_id(self, category_name):
+        """
+        Get the ID for a news category, creating it if it doesn't exist.
+        
+        :param category_name: Name of the category (e.g., 'Business', 'Technology')
+        :return: The ID of the category
+        """
+        if not category_name or category_name.strip() == '':
+            return None
+        
+        with self.sqlite_connect() as cursor:
+            # Try to get existing category
+            cursor.execute("SELECT id FROM news_categories WHERE name = ?", (category_name,))
+            result = cursor.fetchone()
+            
+            if result:
+                return result[0]
+            
+        with self.sqlite_connect() as cursor:
+            # Create new category if it doesn't exist
+            cursor.execute(
+                "INSERT INTO news_categories (name) VALUES (?)",
+                (category_name,)
+            )
+            self.logger.info(f"Created new news category: {category_name}")
+            return cursor.lastrowid
+
+    def get_recent_articles(self, limit=50, source=None, category=None):
+        """
+        Get recent news articles with optional filtering.
+        
+        :param limit: Maximum number of articles to return
+        :param source: Filter by source name (optional)
+        :param category: Filter by category name (optional)
+        :return: List of article dictionaries
+        """
+        query = """
+            SELECT 
+                a.id, 
+                s.name AS source,
+                a.title,
+                a.url,
+                a.published_date,
+                a.fetch_date,
+                a.summary
+            FROM 
+                news_articles a
+            JOIN 
+                news_sources s ON a.source_id = s.id
+        """
+        
+        params = []
+        where_clauses = []
+        
+        if source:
+            where_clauses.append("s.name = ?")
+            params.append(source)
+        
+        if category:
+            query += """
+                JOIN 
+                    article_categories ac ON a.id = ac.article_id
+                JOIN 
+                    news_categories c ON ac.category_id = c.id
+            """
+            where_clauses.append("c.name = ?")
+            params.append(category)
+        
+        if where_clauses:
+            query += " WHERE " + " AND ".join(where_clauses)
+        
+        query += " ORDER BY a.published_date DESC LIMIT ?"
+        params.append(limit)
+        
+        articles = []
+        with self.sqlite_connect() as cursor:
+            cursor.execute(query, params)
+            
+            for row in cursor.fetchall():
+                articles.append({
+                    "id": row[0],
+                    "source": row[1],
+                    "title": row[2],
+                    "url": row[3],
+                    "published_date": row[4],
+                    "fetch_date": row[5],
+                    "summary": row[6]
+                })
+        
+        return articles
+
+    def get_articles_by_asset(self, asset_symbol, asset_type='stock', limit=20):
+        """
+        Get articles that mention a specific asset.
+        
+        :param asset_symbol: Symbol of the asset (e.g., 'AAPL')
+        :param asset_type: Type of asset ('stock' or 'crypto')
+        :param limit: Maximum number of articles to return
+        :return: List of article dictionaries
+        """
+        query = """
+            SELECT 
+                a.id,
+                s.name AS source,
+                a.title,
+                a.url,
+                a.published_date,
+                a.summary,
+                m.mention_count,
+                m.is_primary
+            FROM 
+                article_mentions m
+            JOIN 
+                news_articles a ON m.article_id = a.id
+            JOIN 
+                news_sources s ON a.source_id = s.id
+            WHERE 
+                m.asset_symbol = ? AND m.asset_type = ?
+            ORDER BY 
+                a.published_date DESC, m.mention_count DESC
+            LIMIT ?
+        """
+        
+        articles = []
+        with self.sqlite_connect() as cursor:
+            cursor.execute(query, (asset_symbol, asset_type, limit))
+            
+            for row in cursor.fetchall():
+                articles.append({
+                    "id": row[0],
+                    "source": row[1],
+                    "title": row[2],
+                    "url": row[3],
+                    "published_date": row[4],
+                    "summary": row[5],
+                    "mention_count": row[6],
+                    "is_primary": bool(row[7])
+                })
+        
+        return articles
+
+    ################
+    # CREATE Methods
+    ################
+    
+    def store_article(self, title, url, source_name, published_date=None, summary=None, 
+                    content=None, image_url=None, image_alt=None, categories=None):
+        """
+        Store an article in the database, along with its categories.
+        
+        :param title: Article title
+        :param url: Article URL (must be unique)
+        :param source_name: Name of the source (e.g., 'Reuters', 'Yahoo Finance')
+        :param published_date: Publication date (optional)
+        :param summary: Article summary/description (optional)
+        :param content: Full article content (optional)
+        :param image_url: URL to article image (optional)
+        :param image_alt: Alt text for image (optional)
+        :param categories: List of category names (optional)
+        :return: The ID of the inserted/updated article
+        """
+        if not url or not title:
+            self.logger.warning("Cannot store article without URL and title")
+            return None
+        
+        # Get or create source
+        source_id = self.get_source_id(source_name)
+        
+        # Check if article already exists
+        with self.sqlite_connect() as cursor:
+            cursor.execute("SELECT id FROM news_articles WHERE url = ?", (url,))
+            existing = cursor.fetchone()
+            
+            if existing:
+                article_id = existing[0]
+                # Update existing article
+                cursor.execute("""
+                    UPDATE news_articles SET
+                        title = ?, 
+                        source_id = ?,
+                        published_date = ?,
+                        summary = ?,
+                        content = ?,
+                        image_url = ?,
+                        image_alt = ?,
+                        fetch_date = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """, (title, source_id, published_date, summary, content, 
+                    image_url, image_alt, article_id))
+                
+                self.logger.info(f"Updated existing article: {title}")
+            else:
+                # Insert new article
+                cursor.execute("""
+                    INSERT INTO news_articles (
+                        title, url, source_id, published_date, summary, 
+                        content, image_url, image_alt, fetch_date
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """, (title, url, source_id, published_date, summary, 
+                    content, image_url, image_alt))
+                
+                article_id = cursor.lastrowid
+                self.logger.info(f"Inserted new article: {title}")
+            
+        with self.sqlite_connect() as cursor:
+            # Process categories if provided
+            if categories and isinstance(categories, list):
+                # Clear existing categories for this article
+                cursor.execute("DELETE FROM article_categories WHERE article_id = ?", (article_id,))
+                
+                # Add new categories
+                for category_name in categories:
+                    category_id = self.get_category_id(category_name)
+                    if category_id:
+                        cursor.execute("""
+                            INSERT INTO article_categories (article_id, category_id)
+                            VALUES (?, ?)
+                        """, (article_id, category_id))
+        
+        return article_id
+    
+    def store_reuters_article(self, article_data):
+        """
+        Store an article from Reuters in the database.
+        
+        :param article_data: Dictionary with Reuters article data
+        :return: The ID of the inserted/updated article
+        """
+        title = article_data.get('headline', '')
+        url = article_data.get('url', '')
+        published_date = article_data.get('publication_datetime', '')
+        summary = article_data.get('description', '')
+        image_url = article_data.get('image_url', '')
+        image_alt = article_data.get('image_alt', '')
+        
+        # Get category if available
+        categories = []
+        if article_data.get('category'):
+            categories = [article_data['category']]
+        
+        # Store the article
+        article_id = self.store_article(
+            title=title,
+            url=url,
+            source_name='Reuters',
+            published_date=published_date,
+            summary=summary,
+            image_url=image_url,
+            image_alt=image_alt,
+            categories=categories
+        )
+        
+        # Extract ticker mentions from title
+        #if article_id and title:
+        #    self.extract_asset_mentions(article_id, title, 'stock')
+        #    
+        #    # If we have a summary, extract from that too
+        #    if summary:
+        #        self.extract_asset_mentions(article_id, summary, 'stock')
+        
+        return article_id
+
+    def store_yahoo_finance_article(self, article_data):
+        """
+        Store an article from Yahoo Finance in the database.
+        
+        :param article_data: Dictionary with Yahoo Finance article data
+        :return: The ID of the inserted/updated article
+        """
+        title = article_data.get('title', '')
+        url = article_data.get('link', '')
+        published_date = article_data.get('published', '')
+        
+        # Store the article
+        article_id = self.store_article(
+            title=title,
+            url=url,
+            source_name='Yahoo Finance',
+            published_date=published_date,
+            categories=['Finance']  # Default category
+        )
+        
+        # Extract ticker mentions from title
+        #if article_id and title:
+        #    self.extract_asset_mentions(article_id, title, 'stock')
+        
+        return article_id
+
+    def store_articles_from_scraper(self, yfinance_data, reuters_data):
+        """
+        Store all articles from the news scraper.
+        
+        :param yfinance_data: List of articles from Yahoo Finance
+        :param reuters_data: List of articles from Reuters
+        :return: Dictionary with count of articles stored
+        """
+        yahoo_count = 0
+        reuters_count = 0
+        
+        # Process Yahoo Finance articles
+        for article in yfinance_data:
+            if self.store_yahoo_finance_article(article):
+                yahoo_count += 1
+        
+        # Process Reuters articles
+        for article in reuters_data:
+            if self.store_reuters_article(article):
+                reuters_count += 1
+        
+        self.logger.info(f"Stored {yahoo_count} Yahoo Finance articles and {reuters_count} Reuters articles")
+        
+        return {
+            "yahoo_finance": yahoo_count,
+            "reuters": reuters_count,
+            "total": yahoo_count + reuters_count
+        }

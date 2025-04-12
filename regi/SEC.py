@@ -47,9 +47,11 @@ class SEC():
         print(f"Printing out the following tickers' CIK numbers: {self.cik_list}")
         for cik in self.cik_list:
             print(f"{cik}")
-            gaap_record = self.fetch_accounts_payable(cik).decode('utf-8')
-            print(gaap_record)
-
+            gaap_record = self.fetch_accounts_payable(cik)
+            if gaap_record:
+                gaap_record_cleaned = gaap_record.content.decode('utf-8')
+                print(gaap_record_cleaned)
+            
 
         self.fetch_sec_filings(self.cik_list)
 

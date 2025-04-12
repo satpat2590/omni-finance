@@ -1,0 +1,346 @@
+{
+  "timestamp": "2025-04-09 22:32:08",
+  "crypto_analysis": {
+    "top_cryptos": [
+      {
+        "id": 1,
+        "name": "Bitcoin",
+        "symbol": "BTC",
+        "price_usd": 82385.15417034956,
+        "market_cap_usd": 1635269598324.756,
+        "percent_change_24h": 8.43341589
+      },
+      {
+        "id": 1027,
+        "name": "Ethereum",
+        "symbol": "ETH",
+        "price_usd": 1644.1250638148333,
+        "market_cap_usd": 198414378615.55048,
+        "percent_change_24h": 14.64778246
+      },
+      {
+        "id": 825,
+        "name": "Tether USDt",
+        "symbol": "USDT",
+        "price_usd": 0.999535378677733,
+        "market_cap_usd": 144303930044.6163,
+        "percent_change_24h": 0.03501652
+      },
+      {
+        "id": 52,
+        "name": "XRP",
+        "symbol": "XRP",
+        "price_usd": 2.0260954088000083,
+        "market_cap_usd": 118070658359.37918,
+        "percent_change_24h": 14.14194356
+      },
+      {
+        "id": 1839,
+        "name": "BNB",
+        "symbol": "BNB",
+        "price_usd": 579.2171734313337,
+        "market_cap_usd": 82521582217.0323,
+        "percent_change_24h": 5.98503155
+      },
+      {
+        "id": 5426,
+        "name": "Solana",
+        "symbol": "SOL",
+        "price_usd": 117.29744300877489,
+        "market_cap_usd": 60480405247.417435,
+        "percent_change_24h": 12.59526354
+      },
+      {
+        "id": 3408,
+        "name": "USDC",
+        "symbol": "USDC",
+        "price_usd": 0.9999823243380508,
+        "market_cap_usd": 59936452277.97307,
+        "percent_change_24h": -0.00035704
+      },
+      {
+        "id": 74,
+        "name": "Dogecoin",
+        "symbol": "DOGE",
+        "price_usd": 0.15799830069656925,
+        "market_cap_usd": 23508331171.80607,
+        "percent_change_24h": 12.19984365
+      },
+      {
+        "id": 1958,
+        "name": "TRON",
+        "symbol": "TRX",
+        "price_usd": 0.23928589112724336,
+        "market_cap_usd": 22724581168.18371,
+        "percent_change_24h": 4.863826
+      },
+      {
+        "id": 2010,
+        "name": "Cardano",
+        "symbol": "ADA",
+        "price_usd": 0.6237329775153184,
+        "market_cap_usd": 22005936466.188484,
+        "percent_change_24h": 12.37740269
+      },
+      {
+        "id": 3957,
+        "name": "UNUS SED LEO",
+        "symbol": "LEO",
+        "price_usd": 9.38526937117561,
+        "market_cap_usd": 8669567329.595125,
+        "percent_change_24h": 2.97599404
+      },
+      {
+        "id": 1975,
+        "name": "Chainlink",
+        "symbol": "LINK",
+        "price_usd": 12.446744023377764,
+        "market_cap_usd": 8178755129.994928,
+        "percent_change_24h": 14.90971281
+      },
+      {
+        "id": 11419,
+        "name": "Toncoin",
+        "symbol": "TON",
+        "price_usd": 3.083529453432311,
+        "market_cap_usd": 7636418974.85741,
+        "percent_change_24h": 3.17317147
+      },
+      {
+        "id": 5805,
+        "name": "Avalanche",
+        "symbol": "AVAX",
+        "price_usd": 18.280985950779087,
+        "market_cap_usd": 7599813025.203762,
+        "percent_change_24h": 12.84503559
+      },
+      {
+        "id": 512,
+        "name": "Stellar",
+        "symbol": "XLM",
+        "price_usd": 0.23780194692631623,
+        "market_cap_usd": 7320328087.240244,
+        "percent_change_24h": 7.68437723
+      },
+      {
+        "id": 4642,
+        "name": "Hedera",
+        "symbol": "HBAR",
+        "price_usd": 0.1694570498252055,
+        "market_cap_usd": 7155942710.887466,
+        "percent_change_24h": 15.98863781
+      },
+      {
+        "id": 20947,
+        "name": "Sui",
+        "symbol": "SUI",
+        "price_usd": 2.1965475088103266,
+        "market_cap_usd": 7138741843.679129,
+        "percent_change_24h": 14.22644559
+      },
+      {
+        "id": 5994,
+        "name": "Shiba Inu",
+        "symbol": "SHIB",
+        "price_usd": 1.1853301489540025e-05,
+        "market_cap_usd": 6984564743.444486,
+        "percent_change_24h": 11.27674097
+      },
+      {
+        "id": 6536,
+        "name": "MANTRA",
+        "symbol": "OM",
+        "price_usd": 6.791686796388361,
+        "market_cap_usd": 6542097544.981196,
+        "percent_change_24h": 8.86728512
+      },
+      {
+        "id": 1831,
+        "name": "Bitcoin Cash",
+        "symbol": "BCH",
+        "price_usd": 301.06408241883145,
+        "market_cap_usd": 5977307475.838328,
+        "percent_change_24h": 11.62149654
+      }
+    ],
+    "signals": {
+      "BTC": "Neutral signals for 1 at the moment.",
+      "ETH": "Neutral signals for 1027 at the moment.",
+      "USDT": "Neutral signals for 825 at the moment.",
+      "XRP": "Neutral signals for 52 at the moment.",
+      "BNB": "Neutral signals for 1839 at the moment.",
+      "SOL": "Neutral signals for 5426 at the moment.",
+      "USDC": "Neutral signals for 3408 at the moment.",
+      "DOGE": "Neutral signals for 74 at the moment.",
+      "TRX": "Neutral signals for 1958 at the moment.",
+      "ADA": "Neutral signals for 2010 at the moment."
+    },
+    "volatility": {
+      "BTC": {
+        "std_7d": null,
+        "rsi": null,
+        "price": 82385.15417034956
+      },
+      "ETH": {
+        "std_7d": null,
+        "rsi": null,
+        "price": 1644.1250638148333
+      },
+      "USDT": {
+        "std_7d": null,
+        "rsi": null,
+        "price": 0.999535378677733
+      },
+      "XRP": {
+        "std_7d": null,
+        "rsi": null,
+        "price": 2.0260954088000083
+      },
+      "BNB": {
+        "std_7d": null,
+        "rsi": null,
+        "price": 579.2171734313337
+      }
+    }
+  },
+  "news_analysis": {
+    "reuters_categories": {
+      "Sustainable Finance & Reporting": 1,
+      "Technology": 6,
+      "Boards, Policy & Regulation": 1,
+      "Future of Money": 1,
+      "Legal": 1,
+      "Business": 1,
+      "ETFs": 1
+    },
+    "recent_articles": [
+      {
+        "source": "Yahoo Finance",
+        "title": "The Housing Market\u2019s Spring Thaw Is Almost Here. What Could Ice It.",
+        "date": "2025-02-16T19:00:00Z",
+        "link": "https://www.barrons.com/articles/housing-market-home-buyer-mortgage-rates-5eb62e26?siteid=yhoof2&yptr=yahoo"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "More Americans with government loans are falling behind on their mortgages, a warning sign for consumer health",
+        "date": "2025-02-15T13:25:08Z",
+        "link": "https://finance.yahoo.com/news/more-americans-with-government-loans-are-falling-behind-on-their-mortgages-a-warning-sign-for-consumer-health-132508489.html"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "Big Pension Bought Up Palantir, Nvidia, and Tesla Stock. It Sold AT&T.",
+        "date": "2025-02-16T08:00:00Z",
+        "link": "https://www.barrons.com/articles/palantir-stock-nvidia-tesla-att-a6106117?siteid=yhoof2&yptr=yahoo"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "Where Will Nvidia Stock Be in 10 Years?",
+        "date": "2025-02-16T12:00:00Z",
+        "link": "https://finance.yahoo.com/news/where-nvidia-stock-10-years-120000423.html"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "Powell predicts a time when mortgages will be impossible to get in parts of US",
+        "date": "2025-02-11T19:08:20Z",
+        "link": "https://finance.yahoo.com/news/powell-predicts-a-time-when-mortgages-will-be-impossible-to-get-in-parts-of-us-190820841.html"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "How to build your own target-date retirement fund",
+        "date": "2025-02-15T16:30:13Z",
+        "link": "https://finance.yahoo.com/news/how-to-build-your-own-target-date-retirement-fund-163013801.html"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "TKer: All else is never equal when it comes to markets",
+        "date": "2025-02-16T19:20:07Z",
+        "link": "https://finance.yahoo.com/news/tker-all-else-is-never-equal-when-it-comes-to-markets-192007395.html"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "Walmart, Occidental, Alibaba, Newmont, Booking, and More Stocks to Watch This Week",
+        "date": "2025-02-16T19:00:00Z",
+        "link": "https://www.barrons.com/articles/walmart-occidental-alibaba-newmont-booking-stocks-202162c8?siteid=yhoof2&yptr=yahoo"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "History Says the S&P 500 Will Surge in 2025: 2 Stock-Split Stocks to Buy Before It Does",
+        "date": "2025-02-15T23:02:00Z",
+        "link": "https://finance.yahoo.com/news/history-says-p-500-surge-230200655.html"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "DeepSeek drives $1.3 trillion China stock rally as funds pile in",
+        "date": "2025-02-16T00:00:00Z",
+        "link": "https://finance.yahoo.com/news/deepseek-drives-1-3-trillion-000000107.html"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "Dow Jones Futures: Stock Market Eye Record Highs; AI Giants Amazon, Broadcom Near Buy Points",
+        "date": "2025-02-16T18:29:10Z",
+        "link": "https://www.investors.com/market-trend/stock-market-today/dow-jones-futures-ai-stocks-amazon-broadcom-buy-points/?src=A00220&yptr=yahoo"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "Meta is winning over Wall Street while the rest of Big Tech struggles",
+        "date": "2025-02-12T18:41:35Z",
+        "link": "https://finance.yahoo.com/news/meta-is-winning-over-wall-street-while-the-rest-of-big-tech-struggles-184135699.html"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "Five Iraqi banks to be banned from U.S. dollar transactions",
+        "date": "2025-02-16T14:27:03Z",
+        "link": "https://finance.yahoo.com/news/exclusive-five-iraqi-banks-banned-142703134.html"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "Warren Buffett's \"Best Single Measure\" of Stock Valuations Just Made History -- but Not in a Good Way",
+        "date": "2025-02-15T09:06:00Z",
+        "link": "https://finance.yahoo.com/news/warren-buffetts-best-single-measure-090600818.html"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "Why the model for low-cost airlines may be 'evaporating'",
+        "date": "2025-02-16T15:37:13Z",
+        "link": "https://finance.yahoo.com/news/why-the-model-for-low-cost-airlines-may-be-evaporating-153713130.html"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "More Musk-like 'Dexits' pose fresh threat to Delaware's corporation crown",
+        "date": "2025-02-15T15:30:56Z",
+        "link": "https://finance.yahoo.com/news/more-musk-like-dexits-pose-fresh-threat-to-delawares-corporation-crown-153056633.html"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "AI Stocks: Tech Giants, Cloud Titans Face 'Show Me' Moment. Nvidia Earnings Loom.",
+        "date": "2025-02-16T15:13:48Z",
+        "link": "https://www.investors.com/news/technology/artificial-intelligence-stocks/?src=A00220&yptr=yahoo"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "Americans have always sought debt relief after the holidays. Now their struggle is year-round.",
+        "date": "2025-02-16T15:00:57Z",
+        "link": "https://finance.yahoo.com/news/americans-have-always-sought-debt-relief-after-the-holidays-now-their-struggle-is-year-round-150057204.html"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "Surprise: McDonald's Has Higher Profit Margins Than Tesla, Apple, or Netflix",
+        "date": "2025-02-15T08:14:00Z",
+        "link": "https://finance.yahoo.com/news/surprise-mcdonalds-higher-profit-margins-081400658.html"
+      },
+      {
+        "source": "Yahoo Finance",
+        "title": "President Trump Picks Top Antitrust Official. Is Google Stock A Buy Or Sell?",
+        "date": "2025-02-16T14:35:18Z",
+        "link": "https://www.investors.com/news/technology/google-stock-googl-buy-now-alphabet-stock-february-2025/?src=A00220&yptr=yahoo"
+      }
+    ]
+  },
+  "sec_analysis": {},
+  "correlations": {},
+  "summary": {
+    "report_generated": "2025-04-09 22:32:50",
+    "crypto_analyzed": 10,
+    "news_analyzed": 20
+  }
+}

@@ -15,6 +15,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from regi.session import RequestSession
+from regi.omnidb import OmniDB
 
 
 """
@@ -92,8 +93,9 @@ class RegiNewsScraper():
         }
         self.reqsesh = RequestSession()
         self.session = self.reqsesh.session
-        self.base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.data_dir = os.path.join(self.base_dir, "data")
+        self.db = OmniDB()
 
      # Configure the logger
         logconfig = get_logging_config()
@@ -112,9 +114,10 @@ class RegiNewsScraper():
      # Make a request to https://www.reuters.com/business/ and instantiate a BeautifulSoup object with the content
         reuters_data = request_to_reuters(self.session)
         self.reuters_soup = None
+        print(f"\nReuters data is of type: {type(reuters_data)}")
      # If the data was successfully retrieved, then open up the soup
         if reuters_data:
-            self.reuters_soup = BeautifulSoup(reuters_data, "html.parser")
+            self.reuters_soup = BeautifulSoup(reuters_data.content, features="html.parser")
         # Analyze the Reuters data
             reuters_data = self.analyze_reuters_data()
         else:
@@ -130,6 +133,9 @@ class RegiNewsScraper():
             save_json(spath=spath_yfinance, data=yfinance_data, logger=self.logger)
         if reuters_data:
             save_json(spath=spath_reuters, data=reuters_data, logger=self.logger)
+
+     # Store it within the Omni DB
+        self.db.store_articles_from_scraper(yfinance_data=yfinance_data, reuters_data=reuters_data)
 
         return yfinance_data, reuters_data
 
@@ -198,13 +204,13 @@ class RegiNewsScraper():
 
      # Grab the link from the article
         link_element = article.find_all(attrs={"data-testid": "Link"})
-        category_dirty = link_element[0].get_text(strip=True)
-        if category_dirty.endswith("category"):
-            category = category_dirty[:-len("category")]
-            if len(category) == 0:
-                category = None
-        else:
-            category = None
+        category = None
+        if link_element:
+            category_dirty = link_element[0].get_text(strip=True)
+            if category_dirty.endswith("category"):
+                category = category_dirty[:-len("category")]
+                if len(category) == 0:
+                    category = None
 
      # 3. Extract publication datetime:
      #    The <time> element holds the datetime attribute.
@@ -266,4 +272,8 @@ class RegiNewsScraper():
                 return first_paragraph.get_text(strip=True)
 
             return ""
+    
+if __name__=="__main__":
+    reginews = RegiNewsScraper()
+    reginews.grab_news()
 

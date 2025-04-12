@@ -101,60 +101,13 @@ class Crypto:
                 coin["max_supply"]
             ))
 
-            # Use coin["tags"] as categories for metadata
+         # Use coin["tags"] as categories for metadata
             category = ", ".join(coin.get("tags", []))
             metadata.append((crypto_id, None, None, None, None, category))
 
         self.logger.info(f"{len(cryptos)} cryptocurrencies extracted from the REST API.")
         return cryptos, market_data, metadata
 
-    ############################################
-    # CCXT Pro: ASYNC METHODS (REST + WebSocket)
-    ############################################
-
-    async def fetch_binance_orderbook_rest(self, symbol="BTC/USDT", limit=10) -> dict:
-        """
-        Example of using ccxt Pro for a RESTful call, but in async mode.
-        
-        :param symbol: The trading pair, e.g. "BTC/USDT"
-        :param limit: Depth of the order book
-        :return: JSON/dict structure representing the order book
-        """
-        # ccxt Pro usage is asynchronous
-        exchange = ccxt.binance()
-        await exchange.load_markets()
-
-        # This is actually a normal REST call (not WebSocket),
-        # but using ccxt Pro’s asynchronous methods
-        orderbook = await exchange.fetch_order_book(symbol, limit=limit)
-        await exchange.close()
-
-        self.logger.info(f"Fetched Binance order book for {symbol} with limit={limit}.")
-        return orderbook
-
-    async def stream_market_data_ws(self, symbol="BTC/USDT"):
-        """
-        Example: Subscribe to real-time ticker updates from Binance via WebSocket.
-        This runs an infinite loop (until you break it externally).
-
-        :param symbol: The trading pair, e.g. "BTC/USDT"
-        """
-        exchange = ccxt.binance()
-        await exchange.load_markets()
-        self.logger.info(f"Starting WebSocket stream for {symbol}...")
-
-        try:
-            while True:
-                # watch_ticker is an asynchronous subscription method
-                ticker = await exchange.fetch_ticker(symbol)
-                # This ticker updates in real-time as data streams in
-                self.logger.info(f"Live Ticker: {symbol} => {ticker['last']}, Volume: {ticker['baseVolume']}")
-        except Exception as e:
-            self.logger.error(f"Error in WebSocket stream: {e}")
-        finally:
-            # Properly close connection
-            await exchange.close()
-            self.logger.info("WebSocket connection closed.")
 
 # ###############
 # Example usage #
@@ -165,16 +118,3 @@ if __name__ == "__main__":
     # 1) Synchronous flow: fetch CMC data, insert into DB
     cryptos, market_data, metadata = crypto.fetch_crypto_data()
     crypto.insert_data_into_db(cryptos, market_data, metadata)
-
-    # 2) Async ccxt Pro demonstration
-    async def main():
-        # REST: get an orderbook snapshot
-        ob = await crypto.fetch_binance_orderbook_rest("BTC/USDT", limit=5)
-        print(f"\nREST Orderbook: {ob}\n")
-
-        # WebSocket: stream market data (this will keep running)
-        # You can comment this out if you just want a one-off call
-        await crypto.stream_market_data_ws("BTC/USDT")
-
-    # Run the async code
-    asyncio.run(main())
