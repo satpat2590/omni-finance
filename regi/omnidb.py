@@ -35,27 +35,7 @@ class OmniDB:
         self.logger = logging.getLogger(__name__)
 
     @contextmanager
-    def sqlite_connect2(self, timeout=30):
-        """
-        Context manager providing a cursor to interact with the SQLite database.
-        Automatically commits if successful, and rolls back on errors.
-        """
-        conn = sqlite3.connect(self.db_path, timeout=timeout)
-        cursor = conn.cursor()
-
-        try:
-            yield cursor
-            conn.commit()
-        except Exception as e:
-            conn.rollback()
-            self.logger.warning(f"Error rolling back due to: {e}\n")
-            raise e
-        finally:
-            cursor.close()
-            conn.close()
-
-    @contextmanager
-    def sqlite_connect(self, timeout=60, max_retries=5, retry_delay=1.0):
+    def sqlite_connect(self, smesg=None, timeout=60, max_retries=5, retry_delay=1.0):
         """
         Context manager providing a cursor to interact with the SQLite database.
         Automatically commits if successful, and rolls back on errors.
@@ -79,6 +59,7 @@ class OmniDB:
                 
                 # If we get here, operation was successful
                 conn.commit()
+                print(smesg)
                 return
                 
             except sqlite3.OperationalError as e:
@@ -510,6 +491,29 @@ class OmniDB:
             return f"Bearish outlook for {crypto_id} based on RSI signal."
         else:
             return f"Neutral signals for {crypto_id} at the moment."
+    
+    def analyze_all_bull_bear(self):
+        """
+        A method to analyze_crypto_bull_bear for all cryptocurrencies in Omni DB currently.
+
+        This is essentially just a way for us to batch update the indicators for a more accurate analysis. 
+        """
+        query = """
+            SELECT *
+            FROM cryptocurrencies;
+        """
+        with self.sqlite_connect() as cursor:
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            if rows:
+                df = pd.DataFrame([rows], columns=[desc[0] for desc in cursor.description])
+                self.logger.info(f"SELECT query on 'cryptocurrencies' was successful!")
+            else:
+                print(f"No data returned from query: {query}")
+                return 0
+
+        for crypto_id in df["id"]:
+            self.analyze_crypto_bull_bear(crypto_id)
         
 #############################################
 ################ NEWS TABLES ################
@@ -870,11 +874,12 @@ class OmniDB:
         yahoo_count = 0
         reuters_count = 0
         
-        # Use a single database connection for all operations
-        with self.sqlite_connect() as cursor:
+     # Process Yahoo Finance articles
+        for article in yfinance_data:
+            title = article.get('title', '')
+            smesg = f"Successfully stored Yahoo Finance article with title, {title}, in to OmniDB"
+            with self.sqlite_connect(smesg=smesg) as cursor:
             # Process Yahoo Finance articles
-            for article in yfinance_data:
-                title = article.get('title', '')
                 url = article.get('link', '')
                 published_date = article.get('published', '')
                 
@@ -935,8 +940,11 @@ class OmniDB:
                 
                 yahoo_count += 1
             
-            # Process Reuters articles
-            for article in reuters_data:
+     # Process Reuters articles
+        for article in reuters_data:
+            title = article.get('headline', '')
+            smesg = f"Successfully stored Reuters article with title, {title}, in to OmniDB"
+            with self.sqlite_connect(smesg=smesg) as cursor:
                 title = article.get('headline', '')
                 url = article.get('url', '')
                 published_date = article.get('publication_datetime', '')
@@ -947,9 +955,9 @@ class OmniDB:
                 if not url or not title:
                     continue
                     
-                # Get source IDo
-                    cursor.execute("INSERT INTO news_sources (name) VALUES (?)", ('Reuters',))
-                    source_id = cursor.lastrowid
+                # Get source IDs
+                cursor.execute("SELECT id from news_sources WHERE name = ?", ('Reuters',))
+                source_id = cursor.fetchone()
                 
                 # Check if article exists
                 cursor.execute("SELECT id FROM news_articles WHERE url = ?", (url,))
@@ -968,14 +976,14 @@ class OmniDB:
                             image_alt = ?,
                             fetch_date = CURRENT_TIMESTAMP
                         WHERE id = ?
-                    """, (title, source_id, published_date, summary, image_url, image_alt, article_id))
+                    """, (title, source_id[0], published_date, summary, image_url, image_alt, article_id))
                 else:
                     # Insert new article
                     cursor.execute("""
                         INSERT INTO news_articles (
                             title, url, source_id, published_date, summary, image_url, image_alt, fetch_date
                         ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-                    """, (title, url, source_id, published_date, summary, image_url, image_alt))
+                    """, (title, url, source_id[0], published_date, summary, image_url, image_alt))
                     
                     article_id = cursor.lastrowid
                 

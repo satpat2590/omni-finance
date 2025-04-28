@@ -50,7 +50,7 @@ class RequestSession():
 
             if response.status_code != 200:
                 print(f"Failed to fetch page, status code: {response.status_code}")
-                return []
+                return None
             
             return response
         except (ConnectionError, Timeout, TooManyRedirects) as e:

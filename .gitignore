@@ -2,3 +2,4 @@ data/*
 data 
 logs
 regi/__pycache__
+*__pycache__

@@ -86,12 +86,6 @@ class RegiNewsScraper():
         print(f"\n[REGI] - {datetime.datetime.now()} - REGI (Finance Bot) is starting up...\n")
 
      # Configuration
-        headers = {
-            "User-Agent": UserAgent().random,
-            "Accept-Language": "en-US,en;q=0.9",
-            "Referer": "https://www.google.com/",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
-        }
         self.reqsesh = RequestSession()
         self.session = self.reqsesh.session
         self.base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -115,7 +109,6 @@ class RegiNewsScraper():
      # Make a request to https://www.reuters.com/business/ and instantiate a BeautifulSoup object with the content
         reuters_data = request_to_reuters(self.session)
         self.reuters_soup = None
-        print(f"\nReuters data is of type: {type(reuters_data)}")
      # If the data was successfully retrieved, then open up the soup
         if reuters_data:
             self.reuters_soup = BeautifulSoup(reuters_data.content, features="html.parser")
@@ -256,12 +249,10 @@ class RegiNewsScraper():
             """
             try:
                 response = self.reqsesh.get(url)
+                if not response:
+                    return ""
             except Exception as e:
                 print(f"Error fetching article {url}: {e}")
-                return ""
-            
-            if response.status_code != 200:
-                print(f"Failed to fetch article at {url}, status code: {response.status_code}")
                 return ""
 
             article_soup = BeautifulSoup(response.content, "html.parser")
